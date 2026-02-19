@@ -1,0 +1,8 @@
+date,day_of_week,predicted_sales,lower_bound,upper_bound,recommended_stock,temperature,is_festival,is_weekend
+2024-01-01,Monday,62,48,74,68,18.5,0,0
+2024-01-02,Tuesday,62,50,75,69,19.2,0,0
+2024-01-03,Wednesday,62,50,75,68,17.8,0,0
+2024-01-04,Thursday,61,50,74,68,16.5,0,0
+2024-01-05,Friday,62,50,74,68,18.0,0,0
+2024-01-06,Saturday,95,83,107,104,20.1,1,1
+2024-01-07,Sunday,71,59,85,78,19.5,0,1

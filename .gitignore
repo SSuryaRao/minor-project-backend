@@ -1,0 +1,73 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment variables ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+*.env
+
+# ── Flask ──────────────────────────────────────────────────────────────────────
+instance/
+flask_session/
+
+# ── ML model artifacts ────────────────────────────────────────────────────────
+*.pkl
+*.pickle
+*.h5
+*.keras
+*.joblib
+*.model
+*.pt
+*.pth
+*.npy
+*.npz
+saved_models/
+checkpoints/
+
+# ── Data files (large CSVs / raw datasets) ────────────────────────────────────
+data/train.csv
+data/test.csv
+data/transactions.csv
+data/oil.csv
+data/holidays_events.csv
+data/sample_submission.csv
+# Keep stores.csv (small reference file) — remove line below to ignore it too
+# data/stores.csv
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Test / coverage artifacts ────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
