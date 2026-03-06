@@ -1,3 +1,12 @@
+---
+title: salesapi
+emoji: 📈
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # Sales Forecasting Backend API
 
 Flask-based REST API for sales forecasting and inventory optimization using Machine Learning.
