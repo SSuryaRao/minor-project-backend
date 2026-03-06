@@ -11,6 +11,7 @@ from flask_cors import CORS
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import json
 import os
 
 from config.config import Config
@@ -24,6 +25,7 @@ from utils.upload_handler import (
 from models.arima_model import ARIMAForecaster
 from models.prophet_model import ProphetForecaster
 from models.lstm_model import LSTMForecaster
+from utils.gemini_insights import forecast_summary, inventory_alert, anomaly_explain
 
 # Initialize Flask app (API only - no templates)
 app = Flask(__name__)
@@ -135,9 +137,9 @@ def get_sales_data():
         if end_date:
             df = df[df['date'] <= pd.to_datetime(end_date)]
 
-        # Convert to JSON-serializable format
+        # Convert to JSON-serializable format (NaN → null via pandas JSON encoder)
         df['date'] = df['date'].astype(str)
-        result = df.to_dict(orient='records')
+        result = json.loads(df.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -259,9 +261,9 @@ def predict():
         else:
             forecast_df = model.predict(steps=steps)
 
-        # Convert to JSON-serializable format
+        # Convert to JSON-serializable format (NaN → null via pandas JSON encoder)
         forecast_df['date'] = forecast_df['date'].astype(str)
-        result = forecast_df.to_dict(orient='records')
+        result = json.loads(forecast_df.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -371,9 +373,9 @@ def get_weather_forecast():
 
         forecast_df = weather_api.get_forecast(city, country, days)
 
-        # Convert to JSON-serializable format
+        # Convert to JSON-serializable format (NaN → null via pandas JSON encoder)
         forecast_df['date'] = forecast_df['date'].astype(str)
-        result = forecast_df.to_dict(orient='records')
+        result = json.loads(forecast_df.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -398,9 +400,9 @@ def get_holidays():
 
         holidays_df = events_api.get_holidays(country, year)
 
-        # Convert to JSON-serializable format
+        # Convert to JSON-serializable format (NaN → null via pandas JSON encoder)
         holidays_df['date'] = holidays_df['date'].astype(str)
-        result = holidays_df.to_dict(orient='records')
+        result = json.loads(holidays_df.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -422,9 +424,9 @@ def get_upcoming_holidays():
 
         upcoming_df = events_api.get_upcoming_holidays(country, days)
 
-        # Convert to JSON-serializable format
+        # Convert to JSON-serializable format (NaN → null via pandas JSON encoder)
         upcoming_df['date'] = upcoming_df['date'].astype(str)
-        result = upcoming_df.to_dict(orient='records')
+        result = json.loads(upcoming_df.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -621,14 +623,14 @@ def upload_predict():
         else:
             forecast_df = model.predict(steps=steps)
 
-        # Ensure date column is string
+        # Ensure date column is string (NaN → null via pandas JSON encoder)
         forecast_df['date'] = forecast_df['date'].astype(str)
-        result = forecast_df.to_dict(orient='records')
+        result = json.loads(forecast_df.to_json(orient='records'))
 
         # Also return last N rows of actual data for chart context
         tail_data = prepared_data.tail(min(30, len(prepared_data))).copy()
         tail_data['date'] = tail_data['date'].astype(str)
-        historical = tail_data.to_dict(orient='records')
+        historical = json.loads(tail_data.to_json(orient='records'))
 
         return jsonify({
             'success': True,
@@ -642,6 +644,65 @@ def upload_predict():
     except Exception as e:
         import traceback
         print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== Gemini AI Insight Endpoints ====================
+
+@app.route('/api/insights/forecast-summary', methods=['POST'])
+def insight_forecast_summary():
+    """Generate a plain-English forecast summary using Gemini."""
+    try:
+        params = request.json or {}
+        product_family = params.get('product_family', 'BREAD/BAKERY')
+        model_type = params.get('model_type', 'prophet')
+        metrics = params.get('metrics', {})
+        predictions = params.get('predictions', [])
+
+        text = forecast_summary(product_family, model_type, metrics, predictions)
+        return jsonify({'success': True, 'insight': text})
+
+    except RuntimeError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/insights/inventory-alert', methods=['POST'])
+def insight_inventory_alert():
+    """Generate a plain-English inventory action plan using Gemini."""
+    try:
+        params = request.json or {}
+        product_family = params.get('product_family', 'BREAD/BAKERY')
+        recommendations = params.get('recommendations', {})
+
+        text = inventory_alert(product_family, recommendations)
+        return jsonify({'success': True, 'insight': text})
+
+    except RuntimeError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/insights/anomaly-explain', methods=['POST'])
+def insight_anomaly_explain():
+    """Generate a plain-English anomaly explanation using Gemini."""
+    try:
+        params = request.json or {}
+        product_family = params.get('product_family', 'BREAD/BAKERY')
+        date = params.get('date', '')
+        actual = float(params.get('actual', 0))
+        expected = float(params.get('expected', 0))
+        holidays = params.get('holidays', [])
+        weather = params.get('weather', {})
+
+        text = anomaly_explain(product_family, date, actual, expected, holidays, weather)
+        return jsonify({'success': True, 'insight': text})
+
+    except RuntimeError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

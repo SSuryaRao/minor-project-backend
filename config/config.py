@@ -10,6 +10,7 @@ class Config:
     # API Keys
     OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
     CALENDARIFIC_API_KEY = os.getenv('CALENDARIFIC_API_KEY', '')
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
     # Internal shared secret (must match NEXT_PUBLIC_INTERNAL_SECRET in frontend)
     INTERNAL_API_SECRET = os.getenv('INTERNAL_API_SECRET', '')
