@@ -38,15 +38,9 @@ flask_session/
 saved_models/
 checkpoints/
 
-# ── Data files (large CSVs / raw datasets) ────────────────────────────────────
-data/train.csv
+# ── Data files ────────────────────────────────────────────────────────────────
 data/test.csv
-data/transactions.csv
-data/oil.csv
-data/holidays_events.csv
 data/sample_submission.csv
-# Keep stores.csv (small reference file) — remove line below to ignore it too
-# data/stores.csv
 
 # ── Jupyter ───────────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
