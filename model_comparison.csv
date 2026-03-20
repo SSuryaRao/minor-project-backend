@@ -1,5 +1,3 @@
-Model,MAE,RMSE,MAPE (%),R2 Score
-Prophet,9.37,12.70,14.23,0.0287
-ARIMA,10.89,14.46,16.68,-0.2591
-XGBoost,17.95,19.49,23.31,-1.5296
-LSTM,9.68,13.09,15.04,-0.2327
+version https://git-lfs.github.com/spec/v1
+oid sha256:e10db8d5d296689c0543286e55cc9575f2be24b8d4c1856600d6586cb3d3f8f3
+size 161
