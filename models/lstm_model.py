@@ -41,28 +41,22 @@ class LSTMForecaster:
         self.last_date = None  # Store last date
 
     def create_sequences(self, data, lookback):
-        """
-        Create sequences for LSTM
-
-        Parameters:
-        -----------
-        data : np.array
-            Time series data
-        lookback : int
-            Number of time steps to look back
-
-        Returns:
-        --------
-        X, y : sequences and targets
-        """
+        """Create sequences for LSTM — data shape: (n, n_features)"""
         X, y = [], []
         for i in range(lookback, len(data)):
-            X.append(data[i-lookback:i, 0])
-            y.append(data[i, 0])
+            X.append(data[i-lookback:i])
+            y.append(data[i, 0])  # target is always first column (sales)
         return np.array(X), np.array(y)
 
-    def build_model(self, input_shape):
-        """Build OPTIMIZED LSTM architecture with deeper network"""
+    def _add_seasonal_features(self, dates, sales_scaled):
+        """Add sin/cos day-of-week features so LSTM learns weekly seasonality"""
+        dow = np.array([d.dayofweek for d in dates])
+        sin_dow = np.sin(2 * np.pi * dow / 7).reshape(-1, 1)
+        cos_dow = np.cos(2 * np.pi * dow / 7).reshape(-1, 1)
+        return np.hstack([sales_scaled, sin_dow, cos_dow])  # (n, 3)
+
+    def build_model(self, input_shape=(30, 3)):
+        """Build LSTM architecture"""
         layers_list = []
 
         # First LSTM layer
@@ -126,21 +120,22 @@ class LSTMForecaster:
         self.training_data = train_data.copy()
 
         # Get target series
-        y = train_data[target_col].values.reshape(-1, 1)
+        sales = train_data[target_col].values.reshape(-1, 1)
 
         # Scale data
-        y_scaled = self.scaler.fit_transform(y)
+        sales_scaled = self.scaler.fit_transform(sales)
+
+        # Add day-of-week cyclic features
+        dates = pd.to_datetime(train_data['date']) if 'date' in train_data.columns else train_data.index
+        features = self._add_seasonal_features(dates, sales_scaled)  # (n, 3)
 
         # Create sequences
-        X, y = self.create_sequences(y_scaled, self.lookback)
-
-        # Reshape for LSTM [samples, time steps, features]
-        X = X.reshape((X.shape[0], X.shape[1], 1))
+        X, y = self.create_sequences(features, self.lookback)
 
         print(f"Training data shape: X={X.shape}, y={y.shape}")
 
         # Build model
-        self.model = self.build_model((X.shape[1], 1))
+        self.model = self.build_model((X.shape[1], X.shape[2]))
         print("\nModel Architecture:")
         self.model.summary()
 
@@ -194,34 +189,43 @@ class LSTMForecaster:
 
         # Prepare input data
         if isinstance(last_n_days, pd.DataFrame):
-            if 'sales' in last_n_days.columns:
-                input_data = last_n_days['sales'].values
-            else:
-                input_data = last_n_days.values.flatten()
+            input_df = last_n_days.copy()
+            input_sales = input_df['sales'].values if 'sales' in input_df.columns else input_df.values.flatten()
+            input_dates = pd.to_datetime(input_df['date']) if 'date' in input_df.columns else input_df.index
         elif isinstance(last_n_days, pd.Series):
-            input_data = last_n_days.values
+            input_sales = last_n_days.values
+            input_dates = last_n_days.index
         else:
-            input_data = np.array(last_n_days).flatten()
+            input_sales = np.array(last_n_days).flatten()
+            input_dates = pd.date_range(end=self.last_date, periods=len(input_sales), freq='D')
 
         # Take last lookback days
-        input_data = input_data[-self.lookback:]
-        input_data = input_data.reshape(-1, 1)
+        input_sales = input_sales[-self.lookback:].reshape(-1, 1)
+        input_dates = list(input_dates)[-self.lookback:]
 
-        # Scale
-        input_scaled = self.scaler.transform(input_data)
+        # Scale sales
+        sales_scaled = self.scaler.transform(input_sales)
+
+        # Build initial feature matrix with seasonal features
+        features = self._add_seasonal_features(input_dates, sales_scaled)
+        current_batch = features.reshape((1, self.lookback, features.shape[1]))
 
         # Make predictions
         predictions = []
-        current_batch = input_scaled.reshape((1, self.lookback, 1))
+        next_date = self.last_date + pd.Timedelta(days=1)
 
         for i in range(steps):
-            # Predict next day
             pred = self.model.predict(current_batch, verbose=0)
             predictions.append(pred[0, 0])
 
-            # Update batch - reshape prediction to match batch dimensions
-            pred_reshaped = pred.reshape((1, 1, 1))
-            current_batch = np.append(current_batch[:, 1:, :], pred_reshaped, axis=1)
+            # Build next feature row with day-of-week for the forecast date
+            dow = next_date.dayofweek
+            sin_dow = np.sin(2 * np.pi * dow / 7)
+            cos_dow = np.cos(2 * np.pi * dow / 7)
+            next_row = np.array([[pred[0, 0], sin_dow, cos_dow]])  # (1, 3)
+            next_row_3d = next_row.reshape((1, 1, 3))
+            current_batch = np.append(current_batch[:, 1:, :], next_row_3d, axis=1)
+            next_date += pd.Timedelta(days=1)
 
         # Inverse transform predictions
         predictions = np.array(predictions).reshape(-1, 1)
@@ -291,10 +295,11 @@ class LSTMForecaster:
 
         y_test = test_data[target_col].values.reshape(-1, 1)
         y_test_scaled = self.scaler.transform(y_test)
+        test_dates = pd.to_datetime(test_data['date']) if 'date' in test_data.columns else test_data.index
+        test_features = self._add_seasonal_features(test_dates, y_test_scaled)
 
         # Create sequences
-        X_test, y_test = self.create_sequences(y_test_scaled, self.lookback)
-        X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+        X_test, y_test = self.create_sequences(test_features, self.lookback)
 
         # Make predictions
         y_pred_scaled = self.model.predict(X_test, verbose=0)

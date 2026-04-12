@@ -180,7 +180,7 @@ def train_model():
         elif model_type == 'prophet':
             model = ProphetForecaster()
         elif model_type == 'lstm':
-            model = LSTMForecaster(lookback=30, units=50)
+            model = LSTMForecaster(lookback=30, units=64, dropout=0.1, layers=2)
         else:
             return jsonify({
                 'success': False,
@@ -539,7 +539,7 @@ def upload_train():
             model = ProphetForecaster()
         elif model_type == 'lstm':
             lookback = min(30, len(train_df) - 10)
-            model = LSTMForecaster(lookback=lookback, units=50)
+            model = LSTMForecaster(lookback=lookback, units=64, dropout=0.1, layers=2)
         else:
             return jsonify({'success': False, 'error': f'Unknown model type: {model_type}'}), 400
 
