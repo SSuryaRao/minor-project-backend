@@ -176,7 +176,7 @@ def train_model():
 
         # Initialize and train model
         if model_type == 'arima':
-            model = ARIMAForecaster(order=(1, 1, 1))
+            model = ARIMAForecaster(order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
         elif model_type == 'prophet':
             model = ProphetForecaster()
         elif model_type == 'lstm':
@@ -534,7 +534,7 @@ def upload_train():
 
         # Initialize model
         if model_type == 'arima':
-            model = ARIMAForecaster(order=(1, 1, 1))
+            model = ARIMAForecaster(order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
         elif model_type == 'prophet':
             model = ProphetForecaster()
         elif model_type == 'lstm':
